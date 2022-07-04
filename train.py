@@ -24,14 +24,15 @@ def main(_argv):
     logdir = "./data/log"
     isfreeze = False
     steps_per_epoch = len(trainset)
-    first_stage_epochs = cfg.TRAIN.FISRT_STAGE_EPOCHS
-    second_stage_epochs = cfg.TRAIN.SECOND_STAGE_EPOCHS
+    # first_stage_epochs = cfg.TRAIN.FISRT_STAGE_EPOCHS
+    # second_stage_epochs = cfg.TRAIN.SECOND_STAGE_EPOCHS
+    epochs = cfg.TRAIN.EPOCHS
     global_steps = tf.Variable(1, trainable=False, dtype=tf.int64)
-    warmup_steps = cfg.TRAIN.WARMUP_EPOCHS * steps_per_epoch
-    total_steps = (first_stage_epochs + second_stage_epochs) * steps_per_epoch
+    # warmup_steps = cfg.TRAIN.WARMUP_EPOCHS * steps_per_epoch
+    total_steps = (epochs) * steps_per_epoch
     # train_steps = (first_stage_epochs + second_stage_epochs) * steps_per_period
 
-    input_layer = tf.keras.layers.Input([cfg.TRAIN.INPUT_SIZE, cfg.TRAIN.INPUT_SIZE, 3])
+    input_layer = tf.keras.layers.Input([cfg.TRAIN.INPUT_SIZE, cfg.TRAIN.INPUT_SIZE, cfg.TRAIN.INPUT_SIZE, 1])
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     IOU_LOSS_THRESH = cfg.YOLO.IOU_LOSS_THRESH
 
@@ -39,14 +40,7 @@ def main(_argv):
 
     feature_maps = YOLO(input_layer, NUM_CLASS, FLAGS.model, FLAGS.tiny)
     if FLAGS.tiny:
-        bbox_tensors = []
-        for i, fm in enumerate(feature_maps):
-            if i == 0:
-                bbox_tensor = decode_train(fm, cfg.TRAIN.INPUT_SIZE // 16, NUM_CLASS, STRIDES, ANCHORS, i, XYSCALE)
-            else:
-                bbox_tensor = decode_train(fm, cfg.TRAIN.INPUT_SIZE // 32, NUM_CLASS, STRIDES, ANCHORS, i, XYSCALE)
-            bbox_tensors.append(fm)
-            bbox_tensors.append(bbox_tensor)
+        raise("not available")
     else:
         bbox_tensors = []
         for i, fm in enumerate(feature_maps):
@@ -65,6 +59,7 @@ def main(_argv):
     if FLAGS.weights == None:
         print("Training from scratch")
     else:
+        raise
         if FLAGS.weights.split(".")[len(FLAGS.weights.split(".")) - 1] == "weights":
             utils.load_weights(model, FLAGS.weights, FLAGS.model, FLAGS.tiny)
         else:
@@ -101,13 +96,13 @@ def main(_argv):
                                                                prob_loss, total_loss))
             # update learning rate
             global_steps.assign_add(1)
-            if global_steps < warmup_steps:
-                lr = global_steps / warmup_steps * cfg.TRAIN.LR_INIT
-            else:
-                lr = cfg.TRAIN.LR_END + 0.5 * (cfg.TRAIN.LR_INIT - cfg.TRAIN.LR_END) * (
-                    (1 + tf.cos((global_steps - warmup_steps) / (total_steps - warmup_steps) * np.pi))
-                )
-            optimizer.lr.assign(lr.numpy())
+            # if global_steps < warmup_steps:
+            #     lr = global_steps / warmup_steps * cfg.TRAIN.LR_INIT
+            # else:
+            #     lr = cfg.TRAIN.LR_END + 0.5 * (cfg.TRAIN.LR_INIT - cfg.TRAIN.LR_END) * (
+            #         (1 + tf.cos((global_steps - warmup_steps) / (total_steps - warmup_steps) * np.pi))
+            #     )
+            # optimizer.lr.assign(lr.numpy())
 
             # writing summary data
             with writer.as_default():
@@ -136,19 +131,11 @@ def main(_argv):
                      "prob_loss: %4.2f   total_loss: %4.2f" % (global_steps, giou_loss, conf_loss,
                                                                prob_loss, total_loss))
 
-    for epoch in range(first_stage_epochs + second_stage_epochs):
-        if epoch < first_stage_epochs:
-            if not isfreeze:
-                isfreeze = True
-                for name in freeze_layers:
-                    freeze = model.get_layer(name)
-                    freeze_all(freeze)
-        elif epoch >= first_stage_epochs:
-            if isfreeze:
-                isfreeze = False
-                for name in freeze_layers:
-                    freeze = model.get_layer(name)
-                    unfreeze_all(freeze)
+    for epoch in range(epochs):
+        if epoch == 0:
+            for name in freeze_layers:
+                freeze = model.get_layer(name)
+                unfreeze_all(freeze)
         for image_data, target in trainset:
             train_step(image_data, target)
         for image_data, target in testset:

@@ -7,13 +7,10 @@ from core.config import cfg
 
 def load_freeze_layer(model='yolov4', tiny=False):
     if tiny:
-        if model == 'yolov3':
-            freeze_layouts = ['conv2d_9', 'conv2d_12']
-        else:
-            freeze_layouts = ['conv2d_17', 'conv2d_20']
+        raise
     else:
         if model == 'yolov3':
-            freeze_layouts = ['conv2d_58', 'conv2d_66', 'conv2d_74']
+            raise
         else:
             freeze_layouts = ['conv2d_93', 'conv2d_101', 'conv2d_109']
     return freeze_layouts
@@ -171,26 +168,26 @@ def bbox_iou(bboxes1, bboxes2):
     ex) (4,):(3,4) -> (3,)
         (2,1,4):(2,3,4) -> (2,3)
     """
-    bboxes1_area = bboxes1[..., 2] * bboxes1[..., 3]
-    bboxes2_area = bboxes2[..., 2] * bboxes2[..., 3]
+    bboxes1_area = bboxes1[..., 3] * bboxes1[..., 4] * bboxes1[..., 5]
+    bboxes2_area = bboxes2[..., 3] * bboxes2[..., 4] * bboxes2[..., 5]
 
     bboxes1_coor = tf.concat(
         [
-            bboxes1[..., :2] - bboxes1[..., 2:] * 0.5,
-            bboxes1[..., :2] + bboxes1[..., 2:] * 0.5,
+            bboxes1[..., :3] - bboxes1[..., 3:] * 0.5,
+            bboxes1[..., :3] + bboxes1[..., 3:] * 0.5,
         ],
         axis=-1,
     )
     bboxes2_coor = tf.concat(
         [
-            bboxes2[..., :2] - bboxes2[..., 2:] * 0.5,
-            bboxes2[..., :2] + bboxes2[..., 2:] * 0.5,
+            bboxes2[..., :3] - bboxes2[..., 3:] * 0.5,
+            bboxes2[..., :3] + bboxes2[..., 3:] * 0.5,
         ],
         axis=-1,
     )
 
-    left_up = tf.maximum(bboxes1_coor[..., :2], bboxes2_coor[..., :2])
-    right_down = tf.minimum(bboxes1_coor[..., 2:], bboxes2_coor[..., 2:])
+    left_up = tf.maximum(bboxes1_coor[..., :3], bboxes2_coor[..., :3])
+    right_down = tf.minimum(bboxes1_coor[..., 3:], bboxes2_coor[..., 3:])
 
     inter_section = tf.maximum(right_down - left_up, 0.0)
     inter_area = inter_section[..., 0] * inter_section[..., 1]
@@ -212,26 +209,26 @@ def bbox_giou(bboxes1, bboxes2):
     ex) (4,):(3,4) -> (3,)
         (2,1,4):(2,3,4) -> (2,3)
     """
-    bboxes1_area = bboxes1[..., 2] * bboxes1[..., 3]
-    bboxes2_area = bboxes2[..., 2] * bboxes2[..., 3]
+    bboxes1_area = bboxes1[..., 3] * bboxes1[..., 4] * bboxes1[..., 5]
+    bboxes2_area = bboxes2[..., 3] * bboxes2[..., 4] * bboxes2[..., 5]
 
     bboxes1_coor = tf.concat(
         [
-            bboxes1[..., :2] - bboxes1[..., 2:] * 0.5,
-            bboxes1[..., :2] + bboxes1[..., 2:] * 0.5,
+            bboxes1[..., :3] - bboxes1[..., 3:] * 0.5,
+            bboxes1[..., :3] + bboxes1[..., 3:] * 0.5,
         ],
         axis=-1,
     )
     bboxes2_coor = tf.concat(
         [
-            bboxes2[..., :2] - bboxes2[..., 2:] * 0.5,
-            bboxes2[..., :2] + bboxes2[..., 2:] * 0.5,
+            bboxes2[..., :3] - bboxes2[..., 3:] * 0.5,
+            bboxes2[..., :3] + bboxes2[..., 3:] * 0.5,
         ],
         axis=-1,
     )
 
-    left_up = tf.maximum(bboxes1_coor[..., :2], bboxes2_coor[..., :2])
-    right_down = tf.minimum(bboxes1_coor[..., 2:], bboxes2_coor[..., 2:])
+    left_up = tf.maximum(bboxes1_coor[..., :3], bboxes2_coor[..., :3])
+    right_down = tf.minimum(bboxes1_coor[..., 3:], bboxes2_coor[..., 3:])
 
     inter_section = tf.maximum(right_down - left_up, 0.0)
     inter_area = inter_section[..., 0] * inter_section[..., 1]
@@ -240,9 +237,9 @@ def bbox_giou(bboxes1, bboxes2):
 
     iou = tf.math.divide_no_nan(inter_area, union_area)
 
-    enclose_left_up = tf.minimum(bboxes1_coor[..., :2], bboxes2_coor[..., :2])
+    enclose_left_up = tf.minimum(bboxes1_coor[..., :3], bboxes2_coor[..., :3])
     enclose_right_down = tf.maximum(
-        bboxes1_coor[..., 2:], bboxes2_coor[..., 2:]
+        bboxes1_coor[..., 3:], bboxes2_coor[..., 3:]
     )
 
     enclose_section = enclose_right_down - enclose_left_up
@@ -373,3 +370,6 @@ def unfreeze_all(model, frozen=False):
         for l in model.layers:
             unfreeze_all(l, frozen)
 
+
+###########################################################
+########## vtk utils

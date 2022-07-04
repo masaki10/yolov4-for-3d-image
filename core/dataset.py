@@ -91,7 +91,8 @@ class Dataset(object):
                     self.batch_size,
                     self.train_input_size,
                     self.train_input_size,
-                    3,
+                    self.train_input_size,
+                    1,
                 ),
                 dtype=np.float32,
             )
@@ -101,8 +102,9 @@ class Dataset(object):
                     self.batch_size,
                     self.train_output_sizes[0],
                     self.train_output_sizes[0],
+                    self.train_output_sizes[0],
                     self.anchor_per_scale,
-                    5 + self.num_classes,
+                    7 + self.num_classes,
                 ),
                 dtype=np.float32,
             )
@@ -111,8 +113,9 @@ class Dataset(object):
                     self.batch_size,
                     self.train_output_sizes[1],
                     self.train_output_sizes[1],
+                    self.train_output_sizes[1],
                     self.anchor_per_scale,
-                    5 + self.num_classes,
+                    7 + self.num_classes,
                 ),
                 dtype=np.float32,
             )
@@ -121,20 +124,21 @@ class Dataset(object):
                     self.batch_size,
                     self.train_output_sizes[2],
                     self.train_output_sizes[2],
+                    self.train_output_sizes[2],
                     self.anchor_per_scale,
-                    5 + self.num_classes,
+                    7 + self.num_classes,
                 ),
                 dtype=np.float32,
             )
 
             batch_sbboxes = np.zeros(
-                (self.batch_size, self.max_bbox_per_scale, 4), dtype=np.float32
+                (self.batch_size, self.max_bbox_per_scale, 6), dtype=np.float32
             )
             batch_mbboxes = np.zeros(
-                (self.batch_size, self.max_bbox_per_scale, 4), dtype=np.float32
+                (self.batch_size, self.max_bbox_per_scale, 6), dtype=np.float32
             )
             batch_lbboxes = np.zeros(
-                (self.batch_size, self.max_bbox_per_scale, 4), dtype=np.float32
+                (self.batch_size, self.max_bbox_per_scale, 6), dtype=np.float32
             )
 
             num = 0
@@ -154,10 +158,10 @@ class Dataset(object):
                         lbboxes,
                     ) = self.preprocess_true_boxes(bboxes)
 
-                    batch_image[num, :, :, :] = image
-                    batch_label_sbbox[num, :, :, :, :] = label_sbbox
-                    batch_label_mbbox[num, :, :, :, :] = label_mbbox
-                    batch_label_lbbox[num, :, :, :, :] = label_lbbox
+                    batch_image[num, :, :, :, :] = image
+                    batch_label_sbbox[num, :, :, :, :, :] = label_sbbox
+                    batch_label_mbbox[num, :, :, :, :, :] = label_mbbox
+                    batch_label_lbbox[num, :, :, :, :, :] = label_lbbox
                     batch_sbboxes[num, :, :] = sbboxes
                     batch_mbboxes[num, :, :] = mbboxes
                     batch_lbboxes[num, :, :] = lbboxes
@@ -180,83 +184,15 @@ class Dataset(object):
                 np.random.shuffle(self.annotations)
                 raise StopIteration
 
-    def random_horizontal_flip(self, image, bboxes):
-        if random.random() < 0.5:
-            _, w, _ = image.shape
-            image = image[:, ::-1, :]
-            bboxes[:, [0, 2]] = w - bboxes[:, [2, 0]]
-
-        return image, bboxes
-
-    def random_crop(self, image, bboxes):
-        if random.random() < 0.5:
-            h, w, _ = image.shape
-            max_bbox = np.concatenate(
-                [
-                    np.min(bboxes[:, 0:2], axis=0),
-                    np.max(bboxes[:, 2:4], axis=0),
-                ],
-                axis=-1,
-            )
-
-            max_l_trans = max_bbox[0]
-            max_u_trans = max_bbox[1]
-            max_r_trans = w - max_bbox[2]
-            max_d_trans = h - max_bbox[3]
-
-            crop_xmin = max(
-                0, int(max_bbox[0] - random.uniform(0, max_l_trans))
-            )
-            crop_ymin = max(
-                0, int(max_bbox[1] - random.uniform(0, max_u_trans))
-            )
-            crop_xmax = max(
-                w, int(max_bbox[2] + random.uniform(0, max_r_trans))
-            )
-            crop_ymax = max(
-                h, int(max_bbox[3] + random.uniform(0, max_d_trans))
-            )
-
-            image = image[crop_ymin:crop_ymax, crop_xmin:crop_xmax]
-
-            bboxes[:, [0, 2]] = bboxes[:, [0, 2]] - crop_xmin
-            bboxes[:, [1, 3]] = bboxes[:, [1, 3]] - crop_ymin
-
-        return image, bboxes
-
-    def random_translate(self, image, bboxes):
-        if random.random() < 0.5:
-            h, w, _ = image.shape
-            max_bbox = np.concatenate(
-                [
-                    np.min(bboxes[:, 0:2], axis=0),
-                    np.max(bboxes[:, 2:4], axis=0),
-                ],
-                axis=-1,
-            )
-
-            max_l_trans = max_bbox[0]
-            max_u_trans = max_bbox[1]
-            max_r_trans = w - max_bbox[2]
-            max_d_trans = h - max_bbox[3]
-
-            tx = random.uniform(-(max_l_trans - 1), (max_r_trans - 1))
-            ty = random.uniform(-(max_u_trans - 1), (max_d_trans - 1))
-
-            M = np.array([[1, 0, tx], [0, 1, ty]])
-            image = cv2.warpAffine(image, M, (w, h))
-
-            bboxes[:, [0, 2]] = bboxes[:, [0, 2]] + tx
-            bboxes[:, [1, 3]] = bboxes[:, [1, 3]] + ty
-
-        return image, bboxes
-
     def parse_annotation(self, annotation):
         line = annotation.split()
         image_path = line[0]
         if not os.path.exists(image_path):
             raise KeyError("%s does not exist ... " % image_path)
-        image = cv2.imread(image_path)
+        # image = cv2.imread(image_path)
+        ### vtkloader
+        image = "vtk_data_loader()"
+
         if self.dataset_type == "converted_coco":
             bboxes = np.array(
                 [list(map(int, box.split(","))) for box in line[1:]]
@@ -269,21 +205,21 @@ class Dataset(object):
             bboxes = bboxes * np.array([width, height, width, height, 1])
             bboxes = bboxes.astype(np.int64)
 
-        if self.data_aug:
-            image, bboxes = self.random_horizontal_flip(
-                np.copy(image), np.copy(bboxes)
-            )
-            image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
-            image, bboxes = self.random_translate(
-                np.copy(image), np.copy(bboxes)
-            )
+        # if self.data_aug:
+        #     image, bboxes = self.random_horizontal_flip(
+        #         np.copy(image), np.copy(bboxes)
+        #     )
+        #     image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))
+        #     image, bboxes = self.random_translate(
+        #         np.copy(image), np.copy(bboxes)
+        #     )
 
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image, bboxes = utils.image_preprocess(
-            np.copy(image),
-            [self.train_input_size, self.train_input_size],
-            np.copy(bboxes),
-        )
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image, bboxes = utils.image_preprocess(
+        #     np.copy(image),
+        #     [self.train_input_size, self.train_input_size],
+        #     np.copy(bboxes),
+        # )
         return image, bboxes
 
 
@@ -293,18 +229,19 @@ class Dataset(object):
                 (
                     self.train_output_sizes[i],
                     self.train_output_sizes[i],
+                    self.train_output_sizes[i],
                     self.anchor_per_scale,
-                    5 + self.num_classes,
+                    7 + self.num_classes,
                 )
             )
             for i in range(3)
         ]
-        bboxes_xywh = [np.zeros((self.max_bbox_per_scale, 4)) for _ in range(3)]
+        bboxes_xywh = [np.zeros((self.max_bbox_per_scale, 6)) for _ in range(3)]
         bbox_count = np.zeros((3,))
 
         for bbox in bboxes:
-            bbox_coor = bbox[:4]
-            bbox_class_ind = bbox[4]
+            bbox_coor = bbox[:6]
+            bbox_class_ind = bbox[6]
 
             onehot = np.zeros(self.num_classes, dtype=np.float)
             onehot[bbox_class_ind] = 1.0
@@ -316,8 +253,8 @@ class Dataset(object):
 
             bbox_xywh = np.concatenate(
                 [
-                    (bbox_coor[2:] + bbox_coor[:2]) * 0.5,
-                    bbox_coor[2:] - bbox_coor[:2],
+                    (bbox_coor[3:] + bbox_coor[:3]) * 0.5,
+                    bbox_coor[3:] - bbox_coor[:3],
                 ],
                 axis=-1,
             )
@@ -328,11 +265,11 @@ class Dataset(object):
             iou = []
             exist_positive = False
             for i in range(3):
-                anchors_xywh = np.zeros((self.anchor_per_scale, 4))
-                anchors_xywh[:, 0:2] = (
-                    np.floor(bbox_xywh_scaled[i, 0:2]).astype(np.int32) + 0.5
+                anchors_xywh = np.zeros((self.anchor_per_scale, 6))
+                anchors_xywh[:, 0:3] = (
+                    np.floor(bbox_xywh_scaled[i, 0:3]).astype(np.int32) + 0.5
                 )
-                anchors_xywh[:, 2:4] = self.anchors[i]
+                anchors_xywh[:, 3:6] = self.anchors[i]
 
                 iou_scale = utils.bbox_iou(
                     bbox_xywh_scaled[i][np.newaxis, :], anchors_xywh
@@ -341,17 +278,17 @@ class Dataset(object):
                 iou_mask = iou_scale > 0.3
 
                 if np.any(iou_mask):
-                    xind, yind = np.floor(bbox_xywh_scaled[i, 0:2]).astype(
+                    xind, yind, zind = np.floor(bbox_xywh_scaled[i, 0:3]).astype(
                         np.int32
                     )
 
-                    label[i][yind, xind, iou_mask, :] = 0
-                    label[i][yind, xind, iou_mask, 0:4] = bbox_xywh
-                    label[i][yind, xind, iou_mask, 4:5] = 1.0
-                    label[i][yind, xind, iou_mask, 5:] = smooth_onehot
+                    label[i][xind, yind, zind, iou_mask, :] = 0
+                    label[i][xind, yind, zind, iou_mask, 0:6] = bbox_xywh
+                    label[i][xind, yind, zind, iou_mask, 6:7] = 1.0
+                    label[i][xind, yind, zind, iou_mask, 7:] = smooth_onehot
 
                     bbox_ind = int(bbox_count[i] % self.max_bbox_per_scale)
-                    bboxes_xywh[i][bbox_ind, :4] = bbox_xywh
+                    bboxes_xywh[i][bbox_ind, :6] = bbox_xywh
                     bbox_count[i] += 1
 
                     exist_positive = True
@@ -361,18 +298,18 @@ class Dataset(object):
                 best_detect = int(best_anchor_ind / self.anchor_per_scale)
                 best_anchor = int(best_anchor_ind % self.anchor_per_scale)
                 xind, yind = np.floor(
-                    bbox_xywh_scaled[best_detect, 0:2]
+                    bbox_xywh_scaled[best_detect, 0:3]
                 ).astype(np.int32)
 
                 label[best_detect][yind, xind, best_anchor, :] = 0
-                label[best_detect][yind, xind, best_anchor, 0:4] = bbox_xywh
-                label[best_detect][yind, xind, best_anchor, 4:5] = 1.0
-                label[best_detect][yind, xind, best_anchor, 5:] = smooth_onehot
+                label[best_detect][yind, xind, best_anchor, 0:6] = bbox_xywh
+                label[best_detect][yind, xind, best_anchor, 6:7] = 1.0
+                label[best_detect][yind, xind, best_anchor, 7:] = smooth_onehot
 
                 bbox_ind = int(
                     bbox_count[best_detect] % self.max_bbox_per_scale
                 )
-                bboxes_xywh[best_detect][bbox_ind, :4] = bbox_xywh
+                bboxes_xywh[best_detect][bbox_ind, :6] = bbox_xywh
                 bbox_count[best_detect] += 1
         label_sbbox, label_mbbox, label_lbbox = label
         sbboxes, mbboxes, lbboxes = bboxes_xywh
