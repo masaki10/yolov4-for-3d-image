@@ -49,7 +49,7 @@ def YOLOv4(input_layer, NUM_CLASS):
 
     route_1 = conv
     conv = common.convolutional(conv, (3, 3, 3, 128, 256))
-    conv_sbbox = common.convolutional(conv, (1, 1, 1, 256, 3 * (NUM_CLASS + 5)), activate=False, bn=False)
+    conv_sbbox = common.convolutional(conv, (1, 1, 1, 256, 3 * (NUM_CLASS + 7)), activate=False, bn=False)
 
     conv = common.convolutional(route_1, (3, 3, 3, 128, 256), downsample=True)
     conv = tf.concat([conv, route_2], axis=-1)
@@ -62,7 +62,7 @@ def YOLOv4(input_layer, NUM_CLASS):
 
     route_2 = conv
     conv = common.convolutional(conv, (3, 3, 3, 256, 512))
-    conv_mbbox = common.convolutional(conv, (1, 1, 1, 512, 3 * (NUM_CLASS + 5)), activate=False, bn=False)
+    conv_mbbox = common.convolutional(conv, (1, 1, 1, 512, 3 * (NUM_CLASS + 7)), activate=False, bn=False)
 
     conv = common.convolutional(route_2, (3, 3, 3, 256, 512), downsample=True)
     conv = tf.concat([conv, route], axis=-1)
@@ -74,7 +74,7 @@ def YOLOv4(input_layer, NUM_CLASS):
     conv = common.convolutional(conv, (1, 1, 1, 1024, 512))
 
     conv = common.convolutional(conv, (3, 3, 3, 512, 1024))
-    conv_lbbox = common.convolutional(conv, (1, 1, 1, 1024, 3 * (NUM_CLASS + 5)), activate=False, bn=False)
+    conv_lbbox = common.convolutional(conv, (1, 1, 1, 1024, 3 * (NUM_CLASS + 7)), activate=False, bn=False)
 
     return [conv_sbbox, conv_mbbox, conv_lbbox]
 

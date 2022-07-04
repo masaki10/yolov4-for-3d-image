@@ -11,12 +11,13 @@ from core import utils
 from core.utils import freeze_all, unfreeze_all
 
 flags.DEFINE_string('model', 'yolov4', 'yolov4, yolov3')
-flags.DEFINE_string('weights', './scripts/yolov4.weights', 'pretrained weights')
+flags.DEFINE_string('weights', None, 'pretrained weights')
 flags.DEFINE_boolean('tiny', False, 'yolo or yolo-tiny')
 
 def main(_argv):
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     if len(physical_devices) > 0:
+        print(physical_devices) 
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     trainset = Dataset(FLAGS, is_training=True)
@@ -53,8 +54,15 @@ def main(_argv):
             bbox_tensors.append(fm)
             bbox_tensors.append(bbox_tensor)
 
+    strategy = tf.distribute.MirroredStrategy()
+    with strategy.scope():
+        model = tf.keras.Model(input_layer, bbox_tensors)
+        
+
     model = tf.keras.Model(input_layer, bbox_tensors)
-    model.summary()
+    # model = tf.keras.Model(input_layer, feature_maps)
+    # model.compile(run_eagerly=True)
+    # model.summary()
 
     if FLAGS.weights == None:
         print("Training from scratch")
@@ -132,6 +140,7 @@ def main(_argv):
                                                                prob_loss, total_loss))
 
     for epoch in range(epochs):
+        print(f"epoch : {epoch}")
         if epoch == 0:
             for name in freeze_layers:
                 freeze = model.get_layer(name)
@@ -146,4 +155,5 @@ if __name__ == '__main__':
     try:
         app.run(main)
     except SystemExit:
+        print("error")
         pass

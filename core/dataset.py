@@ -189,9 +189,11 @@ class Dataset(object):
         image_path = line[0]
         if not os.path.exists(image_path):
             raise KeyError("%s does not exist ... " % image_path)
-        # image = cv2.imread(image_path)
+
         ### vtkloader
-        image = "vtk_data_loader()"
+        image = utils.vtk_data_loader(image_path)
+        image = image.reshape((image.shape[0], image.shape[1], image.shape[2], 1))
+        image = image.astype("float32") / 255
 
         if self.dataset_type == "converted_coco":
             bboxes = np.array(
@@ -297,14 +299,14 @@ class Dataset(object):
                 best_anchor_ind = np.argmax(np.array(iou).reshape(-1), axis=-1)
                 best_detect = int(best_anchor_ind / self.anchor_per_scale)
                 best_anchor = int(best_anchor_ind % self.anchor_per_scale)
-                xind, yind = np.floor(
+                xind, yind, zind = np.floor(
                     bbox_xywh_scaled[best_detect, 0:3]
                 ).astype(np.int32)
 
-                label[best_detect][yind, xind, best_anchor, :] = 0
-                label[best_detect][yind, xind, best_anchor, 0:6] = bbox_xywh
-                label[best_detect][yind, xind, best_anchor, 6:7] = 1.0
-                label[best_detect][yind, xind, best_anchor, 7:] = smooth_onehot
+                label[best_detect][xind, yind, zind, best_anchor, :] = 0
+                label[best_detect][xind, yind, zind, best_anchor, 0:6] = bbox_xywh
+                label[best_detect][xind, yind, zind, best_anchor, 6:7] = 1.0
+                label[best_detect][xind, yind, zind, best_anchor, 7:] = smooth_onehot
 
                 bbox_ind = int(
                     bbox_count[best_detect] % self.max_bbox_per_scale
