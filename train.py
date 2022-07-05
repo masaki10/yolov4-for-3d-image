@@ -54,9 +54,9 @@ def main(_argv):
             bbox_tensors.append(fm)
             bbox_tensors.append(bbox_tensor)
 
-    strategy = tf.distribute.MirroredStrategy()
-    with strategy.scope():
-        model = tf.keras.Model(input_layer, bbox_tensors)
+    # strategy = tf.distribute.MirroredStrategy()
+    # with strategy.scope():
+    #     model = tf.keras.Model(input_layer, bbox_tensors)
         
 
     model = tf.keras.Model(input_layer, bbox_tensors)
