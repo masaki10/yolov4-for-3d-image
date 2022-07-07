@@ -457,3 +457,13 @@ def save_vtk(img, output_path):
   writer.SetFileName(output_path)
   writer.SetInputData(img)
   writer.Write()
+
+def process_vtk(image, bboxes):
+    new_image = np.zeros((160, 160, 160, 1)).astype(np.float32)
+    new_image[:,:,0:image.shape[2],:] = image[:,image.shape[1]-160:image.shape[1],0:image.shape[2],:]
+    new_image[:,:,image.shape[2]:,:] = 128 / 255.
+
+    bboxes[:, [1]] = bboxes[:, [1]] - (image.shape[1]-160)
+    bboxes[:, [4]] = bboxes[:, [4]] - (image.shape[1]-160)
+
+    return new_image, bboxes

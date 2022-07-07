@@ -1,4 +1,6 @@
 sample_data
 data/log
 data/classes/sample.names
+data/classes/simulation.names
 create_dataset
+core/config.py

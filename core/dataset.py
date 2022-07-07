@@ -222,6 +222,7 @@ class Dataset(object):
         #     [self.train_input_size, self.train_input_size],
         #     np.copy(bboxes),
         # )
+        image, bboxes = utils.process_vtk(image, bboxes)
         return image, bboxes
 
 
