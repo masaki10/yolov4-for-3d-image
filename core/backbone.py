@@ -74,4 +74,3 @@ def cspdarknet53(input_data):
     input_data = common.convolutional(input_data, (1, 1, 1, 1024, 512))
 
     return route_1, route_2, input_data
-

@@ -11,7 +11,7 @@ cfg                           = __C
 # YOLO options
 __C.YOLO                      = edict()
 
-__C.YOLO.CLASSES              = "./data/classes/sample.names"
+__C.YOLO.CLASSES              = "./data/classes/simulation.names"
 # __C.YOLO.ANCHORS              = [12,16, 19,36, 40,28, 36,75, 76,55, 72,146, 142,110, 192,243, 459,401]
 # __C.YOLO.ANCHORS              = [12,16,20, 19,36,43, 40,28,16, 36,75,114, 76,55,34, 72,146,220, 142,110,78, 192,243,294, 459,401,343]
 __C.YOLO.ANCHORS              = [32,32,32, 32,32,32, 32,32,32, 32,32,32, 32,32,32, 32,32,32, 32,32,32, 32,32,32, 32,32,32]
@@ -28,7 +28,7 @@ __C.YOLO.IOU_LOSS_THRESH      = 0.5
 # Train options
 __C.TRAIN                     = edict()
 
-__C.TRAIN.ANNOT_PATH          = "./data/dataset/train.txt"
+__C.TRAIN.ANNOT_PATH          = "C:/Users/masuda/Documents/code/python/create_simulation_data/simulation_data/simulation_train.txt"
 __C.TRAIN.BATCH_SIZE          = 3
 # __C.TRAIN.INPUT_SIZE            = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
 __C.TRAIN.INPUT_SIZE          = 160
@@ -45,9 +45,9 @@ __C.TRAIN.EPOCHS   = 100
 # TEST options
 __C.TEST                      = edict()
 
-__C.TEST.ANNOT_PATH           = "./data/dataset/val.txt"
+__C.TEST.ANNOT_PATH           = "C:/Users/masuda/Documents/code/python/create_simulation_data/simulation_data/simulation_val.txt"
 __C.TEST.BATCH_SIZE           = 3
-__C.TEST.INPUT_SIZE           = 416
+__C.TEST.INPUT_SIZE           = 160
 __C.TEST.DATA_AUG             = False
 __C.TEST.DECTECTED_IMAGE_PATH = "./data/detection/"
 __C.TEST.SCORE_THRESHOLD      = 0.25

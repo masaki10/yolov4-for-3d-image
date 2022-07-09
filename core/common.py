@@ -40,6 +40,7 @@ def convolutional(input_layer, filters_shape, downsample=False, activate=True, b
 
 def mish(x):
     return x * tf.math.tanh(tf.math.softplus(x))
+    # return tf.nn.leaky_relu(x, alpha=0.1)
     # return tf.keras.layers.Lambda(lambda x: x*tf.tanh(tf.math.log(1+tf.exp(x))))(x)
 
 def residual_block(input_layer, input_channel, filter_num1, filter_num2, activate_type='leaky'):

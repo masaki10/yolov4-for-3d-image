@@ -4,3 +4,10 @@ data/classes/sample.names
 data/classes/simulation.names
 create_dataset
 core/config.py
+checkpoint
+dataset
+create_dataset_for_back.py
+null
+simulation*
+test_input.vti
+tfdbg2_logdir
