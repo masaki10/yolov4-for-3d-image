@@ -78,8 +78,12 @@ def read_class_names(class_file_name):
             names[ID] = name.strip('\n')
     return names
 
-def load_config(FLAGS):
-    if FLAGS.tiny:
+def load_config(FLAGS=None):
+    if FLAGS is None:
+        STRIDES = np.array(cfg.YOLO.STRIDES)
+        ANCHORS = get_anchors(cfg.YOLO.ANCHORS, False)
+        XYSCALE = cfg.YOLO.XYSCALE
+    elif FLAGS.tiny:
         STRIDES = np.array(cfg.YOLO.STRIDES_TINY)
         ANCHORS = get_anchors(cfg.YOLO.ANCHORS_TINY, FLAGS.tiny)
         XYSCALE = cfg.YOLO.XYSCALE_TINY if FLAGS.model == 'yolov4' else [1, 1]
@@ -324,26 +328,43 @@ def bbox_ciou(bboxes1, bboxes2):
 
     return ciou
 
+def bbox_iou_for_predict(bboxes1, bboxes2):
+    
+    bboxes1_area = (bboxes1[..., 3] - bboxes1[..., 0]) * (bboxes1[..., 4] - bboxes1[..., 1]) * (bboxes1[..., 5] - bboxes1[..., 2])
+    bboxes2_area = (bboxes2[..., 3] - bboxes2[..., 0]) * (bboxes2[..., 4] - bboxes2[..., 1]) * (bboxes2[..., 5] - bboxes2[..., 2])
+
+    left_up = tf.maximum(bboxes1[..., :3], bboxes2[..., :3])
+    right_down = tf.minimum(bboxes1[..., 3:], bboxes2[..., 3:])
+
+    inter_section = tf.maximum(right_down - left_up, 0.0)
+    inter_area = inter_section[..., 0] * inter_section[..., 1] * inter_section[..., 2]
+
+    union_area = bboxes1_area + bboxes2_area - inter_area
+
+    iou = tf.math.divide_no_nan(inter_area, union_area)
+
+    return iou
+
 def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
     """
-    :param bboxes: (xmin, ymin, xmax, ymax, score, class)
+    :param bboxes: (xmin, ymin, zmin, xmax, ymax, zmax, score, class)
 
     Note: soft-nms, https://arxiv.org/pdf/1704.04503.pdf
           https://github.com/bharatsingh430/soft-nms
     """
-    classes_in_img = list(set(bboxes[:, 5]))
+    classes_in_img = list(set(bboxes[:, 7]))
     best_bboxes = []
 
     for cls in classes_in_img:
-        cls_mask = (bboxes[:, 5] == cls)
+        cls_mask = (bboxes[:, 7] == cls)
         cls_bboxes = bboxes[cls_mask]
 
         while len(cls_bboxes) > 0:
-            max_ind = np.argmax(cls_bboxes[:, 4])
+            max_ind = np.argmax(cls_bboxes[:, 6])
             best_bbox = cls_bboxes[max_ind]
             best_bboxes.append(best_bbox)
             cls_bboxes = np.concatenate([cls_bboxes[: max_ind], cls_bboxes[max_ind + 1:]])
-            iou = bbox_iou(best_bbox[np.newaxis, :4], cls_bboxes[:, :4])
+            iou = bbox_iou_for_predict(best_bbox[np.newaxis, :6], cls_bboxes[:, :6])
             weight = np.ones((len(iou),), dtype=np.float32)
 
             assert method in ['nms', 'soft-nms']
@@ -355,8 +376,8 @@ def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
             if method == 'soft-nms':
                 weight = np.exp(-(1.0 * iou ** 2 / sigma))
 
-            cls_bboxes[:, 4] = cls_bboxes[:, 4] * weight
-            score_mask = cls_bboxes[:, 4] > 0.
+            cls_bboxes[:, 6] = cls_bboxes[:, 6] * weight
+            score_mask = cls_bboxes[:, 6] > 0.
             cls_bboxes = cls_bboxes[score_mask]
 
     return best_bboxes
