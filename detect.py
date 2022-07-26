@@ -2,18 +2,21 @@ import tensorflow as tf
 from core import utils
 from core.yolov4 import YOLO, decode_train, filter_boxes
 import numpy as np
+import csv
 
 CONFIG = {
     "input_size": 160,
     "iou_loss_thresh": 0.5,
-    "model_path": "./checkpoint/.h5",
-    "image_path": ".vti",
+    "model_path": "./checkpoint/model.h5",
+    # "image_path": ".vti",
     "score_thres": 0.25,
     "iou_thres": 0.5,
+    "num_class": 4,
+    "ano_path": "./data/dataset/simulation_test.txt",
+    "det_path": "./checkpoint/det_result.csv",
 }
 
-if __name__ == "__main__":
-    print("hello")
+def load_model():
     input_layer = tf.keras.layers.Input([CONFIG["input_size"], CONFIG["input_size"], CONFIG["input_size"], 1])
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config()
     IOU_LOSS_THRESH = CONFIG["iou_loss_thresh"]
@@ -37,11 +40,9 @@ if __name__ == "__main__":
     model = tf.keras.Model(input_layer, bbox_tensors)
     model.load_weights(CONFIG["model_path"])
 
-    img = utils.vtk_data_loader(CONFIG["image_path"])
-    img = img.astype("float32") / 255
-    img = img.reshape((img.shape[0], img.shape[1], img.shape[2], 1))    
-    img = np.array([img])
+    return model
 
+def predict(model, img):
     pred_box = model(img)
 
     preds = [pred_box[1], pred_box[3], pred_box[5]]
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     prob_tensors = []
     for pred in preds:
         pred_prob = pred[:,:,:,:,:,6:7] * pred[:,:,:,:,:,7:]
-        pred_prob = tf.reshape(pred_prob, (pred.shape[0], -1, NUM_CLASS))
+        pred_prob = tf.reshape(pred_prob, (pred.shape[0], -1, CONFIG["num_class"]))
         pred_xywh = tf.reshape(pred[:,:,:,:,:,:6], (pred.shape[0], -1, 6))
         bbox_tensors.append(pred_xywh)
         prob_tensors.append(pred_prob)
@@ -71,8 +72,40 @@ if __name__ == "__main__":
     nms_input = np.array(nms_input)
     result = utils.nms(nms_input, CONFIG["iou_thres"])
 
-    print(result)
-    
-    ### draw_boxs
+    return result
 
-    ### crop_boxs
+
+if __name__ == "__main__":
+    print("hello")
+    model = load_model()
+
+    detect_file = open(CONFIG["det_path"], "w", newline="")
+
+    with open(CONFIG["ano_path"]) as f:
+        txt = f.readlines()
+        
+        for line in txt:
+            image_path = line.strip().split()[0]
+            # labels = line.strip().split()[1:]
+            img = utils.vtk_data_loader(image_path)
+            img = img.astype("float32") / 255
+            img = img.reshape((img.shape[0], img.shape[1], img.shape[2], 1))    
+            img = np.array([img])
+
+            result = predict(model, img)
+            print(result)
+            if result is None:
+                continue
+
+            sentense = f"{image_path}"
+            for r in result:
+                # print(r[0])
+                # print(r[0]*CONFIG["input_size"])
+                r[0:6] = r[0:6]*CONFIG["input_size"]
+                # sentense += f" {r[6]},{r[0]*CONFIG["input_size"]},{r[1]*CONFIG["input_size"]},{r[2]*CONFIG["input_size"]},{r[3]*CONFIG["input_size"]},{r[4]*CONFIG["input_size"]},{r[5]*CONFIG["input_size"]},{r[7]}"
+                sentense += f" {r[6]},{r[0]},{r[1]},{r[2]},{r[3]},{r[4]},{r[5]},{int(r[7])}"
+
+            detect_file.write(f"{sentense}\n")
+       
+
+    detect_file.close()
