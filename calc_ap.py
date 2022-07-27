@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 ## python3 calc_ap.py --gt_path ./data/dataset/simulation_test.txt --det_path ./checkpoint/det_result.csv --output ./checkpoint/ap_result
+## python3 calc_ap.py --gt_path C:/Users/masuda/Documents/code/python/create_simulation_data/simulation_data/simulation_test.txt --det_path C:/Users/masuda/Downloads/yolov4_result/checkpoint_lr1e-3/det_result.csv --output C:/Users/masuda/Documents/code/python/create_simulation_data/simulation_data/ap_result
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -77,6 +78,7 @@ def check_det_bboxes(gt_bboxes, det_bboxes, iou_threshold):
 
     for det_bbox in det_bboxes.itertuples():
         corr_gt_bboxes = gt_bboxes[gt_bboxes["Filename"] == det_bbox.Filename]
+        # print(corr_gt_bboxes)
 
         if corr_gt_bboxes.empty:
             continue
@@ -157,6 +159,18 @@ def calc_metrics(gt_bboxes, det_bboxes, class_, iou_threshold):
         taget_gt_bboxes, taget_det_bboxes, iou_threshold
     )
 
+    tp = taget_det_bboxes["Correct"].sum()
+    fp = (taget_det_bboxes["Correct"] == False).sum()
+    fn = (taget_gt_bboxes["Match"] == False).sum()
+
+    precision_value = tp / (tp + fp)
+    recall_value = tp / (tp + fn)
+    # print(precision_value, recall_value)
+    # raise
+    # print(taget_det_bboxes)
+    # print(tp, fp)
+    # raise
+
     precision, recall = calc_pr_curve(taget_gt_bboxes, taget_det_bboxes)
 
     modified_precision, modified_recall, average_precision = calc_average_precision(
@@ -170,6 +184,8 @@ def calc_metrics(gt_bboxes, det_bboxes, class_, iou_threshold):
         "modified_precision": modified_precision,
         "modified_recall": modified_recall,
         "average_precision": average_precision,
+        "precision_value": precision_value,
+        "recall_value": recall_value,
     }
 
     return result
@@ -201,13 +217,15 @@ def plot_pr_curve(result, save_path=None):
 def aggregate(results):
     metrics = []
     for result in results:
-        metrics.append({"Class": result["class"], "AP": result["average_precision"]})
+        metrics.append({"Class": result["class"], "AP": result["average_precision"], "Precision": result["precision_value"], "Recall": result["recall_value"]})
 
     metrics = pd.DataFrame(metrics)
     metrics.set_index("Class", inplace=True)
     metrics.sort_index(inplace=True)
     
     metrics.loc["mAP"] = metrics["AP"].mean()
+    metrics.loc["mPrecision"] = metrics["Precision"].mean()
+    metrics.loc["mRecall"] = metrics["Recall"].mean()
 
     return metrics
 
